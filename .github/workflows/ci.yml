@@ -1,0 +1,46 @@
+name: CI
+
+on: push
+
+jobs:
+  lint-dockerfile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install Hadolint
+        run: |
+          wget -O /tmp/hadolint https://github.com/hadolint/hadolint/releases/download/v2.7.0/hadolint-Linux-x86_64
+          chmod +x /tmp/hadolint
+
+      - name: Lint Dockerfile
+        run: /tmp/hadolint Dockerfile
+
+  test-app:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.15'
+
+      - name: Run Unit Tests
+        run: go test -v -short --count=1 $(go list ./...)
+
+  build-app-karsajobs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Login to GitHub Container Registry
+        run: echo "${{ secrets.TOKEN }}" | docker login ghcr.io -u ${{ secrets.USER }} --password-stdin
+
+      - name: Build and Push Docker Image
+        run: |
+          docker build -t ghcr.io/novraedi/karsajobs:latest .
+          docker push ghcr.io/novraedi/karsajobs:latest
